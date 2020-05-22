@@ -1,0 +1,81 @@
+# Dimensoes de X ate Y : DXY
+set D010 := {0..10};
+set D09 := {0..9};
+set D110 := {1..10};
+set D111 := {1..11};
+set D15 := {1..5};
+
+param c {i in D15}; # Custo ator
+param d {j in D010}; # Duracao da cena
+param L; # Constante grande
+param m {i in D15, j in D110}; # Matriz M x N de atores por cena
+
+var x{k in D010, j in D111}, binary; # Matriz binaria de ordenacao das N cenas quanto a quem eh imediatamente apos
+var t {j in D010} >=0 , integer; # Inicio da cena
+var e {i in D15} >=0 , integer; # Dia mais cedo de inicio do ator
+var l {i in D15} >=0 , integer; # Dia mais tarde de saida do ator
+var z{k in D010, j in D110} >= 0; # Variavel para linearizacao da restricao 6
+
+
+
+minimize fo: sum {i in D15} c[i] * (l[i] - e[i] + 1 ); # Minimizacao do custo com atores nas cenas
+
+s.t. 
+# Formacao da matriz x[k,j]
+Rest1: sum {j in D110} x[0,j] = 1;
+Rest2:sum {k in D110} x[k,11]=1;
+Rest3 {k in D110}: sum {j in D111 : k <> j} x[k,j]=1;
+Rest4 {j in D110}: sum {k in D010 : k <> j} x[k,j]=1;
+
+# Formacao do vetor t
+Rest61: t[0]=0;
+Rest62 {n in D09}: t[n+1] = sum {j in D110: j<=n} d[j] + 1;
+
+# Formacao da matriz z para linearizacao da restricao 6
+Rest5 {k in D010}: sum {j in D110: k <> j} z[k,j] = t[k] + d[k];
+Rest51 {k in D010, j in D110: k <> j}: z[k,j] >=0 ;
+Rest52 {k in D010, j in D110: k <> j}: z[k,j] <= t[j];
+Rest53 {k in D010, j in D110: k <> j}: z[k,j] >= t[j] + L*(x[k,j] - 1);
+Rest54 {k in D010, j in D110: k <> j}: z[k,j] <= L*(x[k,j]);
+
+# Formacao de e
+Rest7 {i in D15 , j in D110: m[i,j]=1}: e[i] <= t[j];
+
+# Formacao de l
+Rest8 {i in D15, j in D110: m[i,j]=1}: t[j] + d[j] - 1 <= l[i];
+
+solve;
+
+data;
+
+param L:= 99999;
+
+param c :=
+1, 20
+2, 5
+3, 4
+4, 10
+5, 4;
+
+param d :=
+0, 0
+1, 1
+2, 1
+3, 2
+4, 1
+5, 3
+6, 1
+7, 1
+8, 2
+9, 1
+10, 2;
+
+param m: 
+	1	2	3	4	5	6	7	8	9	10:=
+1	1	0	1	0	0	1	0	1	1	1
+2	1	1	1	1	1	0	1	0	1	0
+3	0	1	0	0	0	0	1	1	0	0
+4	1	1	0	0	1	1	0	0	0	0
+5	0	0	0	1	0	0	0	1	1	0;
+
+end;
